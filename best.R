@@ -22,13 +22,14 @@ best <- function(state, outcome) {
   }
   ## Return hospital name in that state with lowest 30-day death rate
   da <- da[da$State == state, c(2, outIdx)]
-  drate <- as.numeric(da[, 2])
+  da[, 2] <- as.numeric(da[, 2])
+  da <- da[!is.na(da[, 2]),] ##filter out NA rows
+  drate <- da[, 2]
   nhospital <- length(drate)
   
   bestHospital <- ""
   lowestRate <- 100
   for (i in 1:nhospital) {
-    if(is.na(drate[i])) next
     if(drate[i] < lowestRate) {
       lowestRate <- drate[i]
       bestHospital <- da[i, 1]
