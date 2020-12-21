@@ -27,6 +27,7 @@ unique(fda$CROPDMGEXP)
 # So now we only focus on "K,k", "M,m", and "B,b", and convert them into
 # 10^3, 10^6 and 10^9. However the for loop is too slow
 ###
+par(cex.axis=0.5)
 
 ## So we can use dplyr package to group and summarize the data
 #Fatalities
@@ -34,12 +35,14 @@ f_fda <- group_by(fda, EVTYPE)
 f_fda <- summarise(f_fda, FATALITIES_SUM=sum(FATALITIES))
 f_fda <- f_fda[order(f_fda$FATALITIES_SUM, decreasing = TRUE), ]
 head(f_fda, n=10)
+plot(FATALITIES_SUM~factor(EVTYPE), f_fda[1:10, ], las=2, xlab="", ylab="")
 
 #Injuries
 i_fda <- group_by(fda, EVTYPE)
 i_fda <- summarise(i_fda, INJURIES_SUM=sum(INJURIES))
 i_fda <- i_fda[order(i_fda$INJURIES_SUM, decreasing = TRUE), ]
 head(i_fda, n=10)
+plot(INJURIES_SUM~factor(EVTYPE), i_fda[1:10, ], las=2, xlab="", ylab="")
 
 #Property damage
 pd_fda <- subset(fda, 

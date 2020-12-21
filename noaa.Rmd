@@ -1,0 +1,135 @@
+---
+title: "Analysis of Severe Weather at NOAA"
+author: "Xiaoban Wu"
+date: "12/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Synopsis
+In this paper, we are going to analyze the [dataset](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) from NOAA. Particularly, We will try to answer two questions: 1) Which event types are most harmful with respect to population health?
+and 2) Which event types have the greatest economic consequences?
+
+## Data Processing
+1. Though the compressed file is about 50MB, but the uncompressed file size would be around 500MB which can be considered large file. We can first look at the first several rows to have rough idea of how the dataset look like.
+
+```{r message=FALSE,cache=TRUE}
+library("dplyr")
+library("data.table")
+da <- read.csv("repdata_data_StormData.csv.bz2", nrows=10)
+print(da)
+```
+
+2. We can look at the column names to find out which columns are most related with our top 2 questions, and then we can select those columns out to save the memory space.
+
+```{r message=FALSE}
+colNames <- names(da)
+print(colNames)
+colIdx <- match(c("EVTYPE", "FATALITIES", "INJURIES", "PROPDMG", "PROPDMGEXP","CROPDMG", "CROPDMGEXP", "REFNUM"), colNames)
+```
+
+3. Since the data size is big, it is better to use data.table library to read the data utilizing built-in multiple threads for fast processing.
+
+```{r message=FALSE,cache=TRUE}
+fda <- fread("repdata_data_StormData.csv.bz2", select=colIdx)
+dim(fda)
+```
+
+4. The "PROPDMGEXP" and "CROPDMGEXP" denote the damage scale, so we need to have a rough idea of what they look like. In this paper, we only focus on "K", "M", and "B", which corresponds to 10^3, 10^6 and 10^9. Please note that since we have about 1M rows in the dataset, it is impossible to iterate through each row and multiply the damage value by the corresponding scale number. Shortly, we will take the advantage of dplyr package to have fast processing.
+
+
+```{r message=FALSE}
+unique(fda$PROPDMGEXP)
+unique(fda$CROPDMGEXP)
+```
+
+5. Use dplyr package to calculate the total fatalities for each event type.
+```{r message=FALSE}
+library("dplyr")
+f_fda <- group_by(fda, EVTYPE)
+f_fda <- summarise(f_fda, FATALITIES_SUM=sum(FATALITIES))
+f_fda <- f_fda[order(f_fda$FATALITIES_SUM, decreasing = TRUE), ]
+```
+
+6. Use dplyr package to calculate the total injuries for each event type.
+```{r message=FALSE}
+library("dplyr")
+i_fda <- group_by(fda, EVTYPE)
+i_fda <- summarise(i_fda, INJURIES_SUM=sum(INJURIES))
+i_fda <- i_fda[order(i_fda$INJURIES_SUM, decreasing = TRUE), ]
+```
+
+7. Use dplyr package to calculate the total property damage for each event type. We first group by both the event type and the damage scale. And second, we can multiply the damage value by the corresponding scale, since we now have much fewer number of rows which would take much less time. 
+```{r message=FALSE}
+library("dplyr")
+pd_fda <- subset(fda, fda$PROPDMGEXP == "K"|fda$PROPDMGEXP == "M"|fda$PROPDMGEXP == "B", c("EVTYPE", "PROPDMG", "PROPDMGEXP"))
+pd_fda <- group_by(pd_fda, .dots=c("EVTYPE", "PROPDMGEXP"))
+pd_fda <- summarise(pd_fda, PROPDMG_SUM=sum(PROPDMG))
+pd_fda <- ungroup(pd_fda)
+nrows <- nrow(pd_fda)
+for (i in 1 : nrows) {
+  pdu <- pd_fda$PROPDMGEXP[i]
+  if (pdu == "K") {
+    pd_fda$PROPDMG_SUM[i] <- pd_fda$PROPDMG_SUM[i] * 1000
+  } else if (pdu == "M") {
+    pd_fda$PROPDMG_SUM[i] <- pd_fda$PROPDMG_SUM[i] * 1000000
+  } else if (pdu == "B") {
+    pd_fda$PROPDMG_SUM[i] <- pd_fda$PROPDMG_SUM[i] * 1000000000
+  }
+}
+pd_fda <- group_by(pd_fda, EVTYPE)
+spd_fda <- summarise(pd_fda, PROPDMG_SUM=sum(PROPDMG_SUM))
+spd_fda <- spd_fda[order(spd_fda$PROPDMG_SUM, decreasing = TRUE), ]
+```
+
+8. Similar to how to calculate the total property damage for each type, we can apply the same approach to get the total crop damage. 
+```{r message=FALSE}
+library("dplyr")
+cd_fda <- subset(fda, fda$CROPDMGEXP == "K"|fda$CROPDMGEXP == "M"|fda$CROPDMGEXP == "B", c("EVTYPE", "CROPDMG", "CROPDMGEXP"))
+cd_fda <- group_by(cd_fda, .dots=c("EVTYPE", "CROPDMGEXP"))
+cd_fda <- summarise(cd_fda, CROPDMG_SUM=sum(CROPDMG))
+cd_fda <- ungroup(cd_fda)
+nrows <- nrow(cd_fda)
+for (i in 1 : nrows) {
+  cdu <- cd_fda$CROPDMGEXP[i]
+  if (cdu == "K") {
+    cd_fda$CROPDMG_SUM[i] <- cd_fda$CROPDMG_SUM[i] * 1000
+  } else if (cdu == "M") {
+    cd_fda$CROPDMG_SUM[i] <- cd_fda$CROPDMG_SUM[i] * 1000000
+  } else if (pdu == "B") {
+    cd_fda$CROPDMG_SUM[i] <- cd_fda$CROPDMG_SUM[i] * 1000000000
+  }
+}
+cd_fda <- group_by(cd_fda, EVTYPE)
+scd_fda <- summarise(cd_fda, CROPDMG_SUM=sum(CROPDMG_SUM))
+scd_fda <- scd_fda[order(scd_fda$CROPDMG_SUM, decreasing = TRUE), ]
+head(scd_fda, n=10)
+```
+
+## Results
+#### 1. Top 10 Events That Have Most Fatalities
+```{r message=FALSE}
+par(cex.axis=0.5)
+head(f_fda, n=10)
+plot(FATALITIES_SUM~factor(EVTYPE), f_fda[1:10, ], las=2, xlab="", ylab="")
+```
+
+#### 2. Top 10 Events That Have Most Injuries
+```{r message=FALSE}
+par(cex.axis=0.5)
+head(i_fda, n=10)
+plot(INJURIES_SUM~factor(EVTYPE), i_fda[1:10, ], las=2, xlab="", ylab="")
+```
+
+#### 3. Top 10 Events That Have Most Property Damage
+```{r message=FALSE}
+head(spd_fda, n=10)
+```
+
+#### 4. Top 10 Events That Have Most Crop Damage
+```{r message=FALSE}
+head(scd_fda, n=10)
+```
