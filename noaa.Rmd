@@ -114,14 +114,14 @@ head(scd_fda, n=10)
 ```{r message=FALSE}
 par(cex.axis=0.5)
 head(f_fda, n=10)
-plot(FATALITIES_SUM~factor(EVTYPE), f_fda[1:10, ], las=2, xlab="", ylab="")
+plot(FATALITIES_SUM~factor(EVTYPE), f_fda[1:10, ], las=2, xlab="", ylab="", main="Top 10 Events That Have Most Fatalities")
 ```
 
 #### 2. Top 10 Events That Have Most Injuries
 ```{r message=FALSE}
 par(cex.axis=0.5)
 head(i_fda, n=10)
-plot(INJURIES_SUM~factor(EVTYPE), i_fda[1:10, ], las=2, xlab="", ylab="")
+plot(INJURIES_SUM~factor(EVTYPE), i_fda[1:10, ], las=2, xlab="", ylab="", main="Top 10 Events That Have Most Injuries")
 ```
 
 #### 3. Top 10 Events That Have Most Property Damage
